@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Power Index</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #c8a96e;
+    --accent2: #4a9eff;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --green: #3ddc84;
+    --yellow: #f5c842;
+    --red: #ff5252;
+    --red-dark: #c62828;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,169,110,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,169,110,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    text-align: center;
+  }
+
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .label a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(200,169,110,0.4);
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .label a:hover {
+    color: #e8c98e;
+    border-bottom-color: #e8c98e;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 10vw, 96px);
+    letter-spacing: 8px;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 16px;
+    white-space: nowrap;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    max-width: 600px;
+    line-height: 1.6;
+    margin: 0 auto;
+  }
+
+  /* Search */
+  .search-section {
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 20px;
+    font-size: 16px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  #searchInput {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px 16px 50px;
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 1px;
+  }
+
+  #searchInput:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,169,110,0.1);
+  }
+
+  #searchInput::placeholder { color: var(--muted); }
+
+  /* Suggestions */
+  .suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 100;
+    overflow: hidden;
+    display: none;
+  }
+
+  .suggestions.show { display: block; }
+
+  .suggestion-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    transition: background 0.15s;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover, .suggestion-item.active { background: var(--border); }
+
+  .suggestion-flag { font-size: 20px; }
+  .suggestion-name { color: var(--text); }
+  .suggestion-score { margin-left: auto; color: var(--accent); font-size: 12px; }
+
+  /* Counter */
+  .results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .results-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .results-count span { color: var(--accent); }
+
+  .reset-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Table */
+  .table-container {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  thead tr {
+    background: #0d0d16;
+    border-bottom: 1px solid var(--accent);
+  }
+
+  thead th {
+    padding: 14px 16px;
+    text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  thead th.country-col {
+    color: var(--accent);
+    min-width: 140px;
+  }
+
+  thead th.indicator-col {
+    min-width: 190px;
+    position: sticky;
+    left: 0;
+    background: #0d0d16;
+    z-index: 2;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(200,169,110,0.03); }
+
+  tbody tr.total-row {
+    background: #0d0d16;
+    border-top: 1px solid var(--accent);
+  }
+
+  tbody tr.total-row td {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  td {
+    padding: 10px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  td.indicator-name {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  tbody tr:hover td.indicator-name { background: #161621; }
+  tbody tr.total-row td.indicator-name { background: #0d0d16; color: var(--accent); font-size: 11px; }
+
+  .score-cell {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 24px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Country header in table */
+  .country-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .country-flag-header { font-size: 22px; line-height: 1; }
+  .country-name-header { font-size: 9px; letter-spacing: 1.5px; color: var(--text); }
+  .country-total-header { font-size: 10px; color: var(--accent); }
+
+  /* Rank badge */
+  .rank-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    display: none;
+  }
+
+  .empty-state.show { display: block; }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-text { font-family: 'DM Mono', monospace; color: var(--muted); font-size: 13px; }
+
+  /* Sources */
+  .sources {
+    margin-top: 32px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .sources p {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+  }
+
+  .sources p strong { color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  tbody tr {
+    animation: fadeIn 0.25s ease forwards;
+  }
+
+  thead th:first-child { border-radius: 6px 0 0 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="label"><a href="https://www.economicprinciples.org" target="_blank" rel="noopener">Dalio Framework</a> · 2024–2025 Data</span>
+    <h1>GLOBAL <span>POWER</span> INDEX</h1>
+    <p class="subtitle">17 indicators · 0–10 scale · Sources: TI CPI, World Bank, IMF, IISS, GPI, UNDP, WEF, WTO, Freedom House, WJP</p>
+  </header>
+
+  <div class="search-section">
+    <div class="search-wrapper">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Search any country... e.g. Germany, Japan, India" autocomplete="off" />
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+
+  <div class="results-meta">
+    <div class="results-count">SHOWING <span id="countLabel">5</span> OF <span id="totalLabel">0</span> COUNTRIES</div>
+    <button class="reset-btn" id="resetBtn">↺ RESET TO TOP 5</button>
+  </div>
+
+  <div class="table-container" id="tableContainer">
+    <table id="mainTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🌍</div>
+    <div class="empty-text">No country found. Try "France", "Germany", or "Japan"</div>
+  </div>
+
+  <div class="sources">
+    <p><strong>SOURCES —</strong> Transparency International CPI (2024) · World Bank Human Capital & Governance Indicators · IMF World Economic Outlook (Oct 2024) · IISS Military Balance 2024 · SIPRI Military Expenditure Database · Institute for Economics & Peace — Global Peace Index 2024 · UNDP Human Development Report 2023/24 · WEF Global Competitiveness Report · WTO Trade Profiles · Freedom House Freedom in the World 2024 · World Justice Project Rule of Law Index · OECD Economic Surveys</p>
+  </div>
+
+</div>
+
+<script>
+// ─── ALL COUNTRY DATA ────────────────────────────────────────────────────────
+const INDICATORS = [
+  "Strong Leadership",
+  "Education Levels",
+  "Character / Determination",
+  "Rule of Law",
+  "Low Corruption",
+  "Resource Efficiency",
+  "Global Openness",
+  "Productivity Growth",
+  "Cost Competitiveness",
+  "Trade & Capital Flows",
+  "Infrastructure",
+  "Low Indebtedness",
+  "Military Strength",
+  "Wealth / Opportunity Gaps",
+  "Low Internal Conflict",
+  "Geography",
+  "Nature Stability"
+];
+
+const COUNTRIES = [
+  { name:"United States",   flag:"🇺🇸", scores:[5,8,6,7,6,6,7,6,4,7,5,2,10,3,4,9,6] },
+  { name:"China",           flag:"🇨🇳", scores:[8,7,9,4,4,7,5,8,8,8,9,5,8,4,6,7,5] },
+  { name:"Germany",         flag:"🇩🇪", scores:[7,8,7,9,8,8,9,7,5,8,9,6,6,7,8,7,8] },
+  { name:"Japan",           flag:"🇯🇵", scores:[6,9,9,8,8,8,7,7,5,7,9,3,6,7,9,6,6] },
+  { name:"United Kingdom",  flag:"🇬🇧", scores:[7,8,7,8,7,7,9,7,4,8,8,4,7,5,7,7,7] },
+  { name:"France",          flag:"🇫🇷", scores:[6,8,7,8,7,7,8,6,4,8,8,5,7,5,6,8,7] },
+  { name:"South Korea",     flag:"🇰🇷", scores:[6,9,8,7,6,8,7,8,7,8,9,5,6,6,7,5,7] },
+  { name:"India",           flag:"🇮🇳", scores:[6,6,8,5,4,5,6,7,8,6,6,6,7,3,4,8,5] },
+  { name:"Canada",          flag:"🇨🇦", scores:[6,8,7,9,8,7,9,6,4,7,7,5,5,6,8,9,6] },
+  { name:"Australia",       flag:"🇦🇺", scores:[6,8,7,9,8,7,8,6,4,7,7,5,6,6,8,8,5] },
+  { name:"Switzerland",     flag:"🇨🇭", scores:[7,9,7,10,9,9,10,8,3,9,9,8,4,8,9,6,8] },
+  { name:"Netherlands",     flag:"🇳🇱", scores:[7,8,7,9,9,9,10,8,4,9,9,7,5,7,9,6,7] },
+  { name:"Sweden",          flag:"🇸🇪", scores:[7,9,7,9,8,8,9,7,3,8,8,7,5,8,9,6,7] },
+  { name:"Norway",          flag:"🇳🇴", scores:[7,9,7,9,8,8,8,7,2,7,8,9,4,9,9,7,6] },
+  { name:"Denmark",         flag:"🇩🇰", scores:[7,9,7,10,9,9,9,8,3,8,9,8,4,8,9,6,8] },
+  { name:"Singapore",       flag:"🇸🇬", scores:[9,9,8,9,9,10,10,9,5,10,10,8,5,6,9,5,8] },
+  { name:"Israel",          flag:"🇮🇱", scores:[6,9,9,7,7,7,8,7,3,6,7,4,8,5,2,4,6] },
+  { name:"Russia",          flag:"🇷🇺", scores:[7,7,8,2,2,3,2,4,6,3,5,7,8,3,4,7,6] },
+  { name:"Brazil",          flag:"🇧🇷", scores:[5,6,6,4,3,4,6,6,6,6,5,2,5,3,4,8,4] },
+  { name:"Iran",            flag:"🇮🇷", scores:[4,6,7,3,2,3,2,3,6,1,3,4,4,3,4,5,5] },
+  { name:"Guatemala",       flag:"🇬🇹", scores:[3,3,5,2,2,3,5,4,7,5,2,7,1,1,4,5,3] },
+  { name:"Mexico",          flag:"🇲🇽", scores:[4,6,6,4,3,4,6,5,7,6,5,5,4,3,3,7,5] },
+  { name:"Argentina",       flag:"🇦🇷", scores:[3,7,6,4,3,3,5,3,5,4,4,2,4,3,5,7,5] },
+  { name:"Colombia",        flag:"🇨🇴", scores:[4,6,6,4,3,4,6,5,7,5,5,5,4,3,3,6,5] },
+  { name:"Chile",           flag:"🇨🇱", scores:[6,7,7,7,6,6,7,6,6,7,7,6,4,5,7,6,6] },
+  { name:"Peru",            flag:"🇵🇪", scores:[3,6,6,3,3,4,6,5,7,5,4,5,3,3,4,6,4] },
+  { name:"Venezuela",       flag:"🇻🇪", scores:[2,5,5,2,1,2,2,2,6,2,2,2,3,2,3,7,4] },
+  { name:"Saudi Arabia",    flag:"🇸🇦", scores:[8,6,7,5,5,6,6,6,7,7,7,8,6,4,5,6,6] },
+  { name:"UAE",             flag:"🇦🇪", scores:[9,7,7,7,7,8,9,7,6,8,9,7,5,5,7,6,7] },
+  { name:"Turkey",          flag:"🇹🇷", scores:[7,7,7,4,4,5,5,6,7,6,7,4,6,4,4,7,6] },
+  { name:"Egypt",           flag:"🇪🇬", scores:[7,6,6,4,3,4,5,4,8,5,5,3,5,3,4,6,5] },
+  { name:"Nigeria",         flag:"🇳🇬", scores:[3,4,6,3,2,3,5,4,8,4,3,4,4,2,3,6,4] },
+  { name:"South Africa",    flag:"🇿🇦", scores:[4,7,6,5,4,4,6,4,7,5,5,4,4,3,4,6,5] },
+  { name:"Ethiopia",        flag:"🇪🇹", scores:[4,4,7,3,2,3,4,4,9,3,3,5,3,2,3,5,4] },
+  { name:"Kenya",           flag:"🇰🇪", scores:[5,5,6,4,3,4,5,5,7,5,4,5,3,3,4,5,4] },
+  { name:"Pakistan",        flag:"🇵🇰", scores:[4,5,7,3,3,3,4,4,8,4,4,4,5,2,3,5,4] },
+  { name:"Bangladesh",      flag:"🇧🇩", scores:[4,5,6,4,3,4,5,5,9,5,4,5,3,3,4,4,4] },
+  { name:"Indonesia",       flag:"🇮🇩", scores:[5,6,7,5,4,5,6,6,8,6,5,6,4,4,6,6,5] },
+  { name:"Vietnam",         flag:"🇻🇳", scores:[7,7,8,4,4,7,6,8,9,7,7,6,4,5,7,5,6] },
+  { name:"Thailand",        flag:"🇹🇭", scores:[6,7,7,5,4,6,6,6,7,6,7,5,4,4,6,6,6] },
+  { name:"Malaysia",        flag:"🇲🇾", scores:[7,7,7,6,5,7,7,7,7,7,8,6,4,5,7,6,7] },
+  { name:"Philippines",     flag:"🇵🇭", scores:[4,6,7,5,3,4,6,5,7,5,5,5,4,3,4,5,4] },
+  { name:"Taiwan",          flag:"🇹🇼", scores:[7,9,8,8,7,8,8,8,6,8,8,6,6,7,8,5,7] },
+  { name:"Poland",          flag:"🇵🇱", scores:[6,8,7,7,6,7,7,7,6,7,8,6,6,6,7,6,7] },
+  { name:"Spain",           flag:"🇪🇸", scores:[5,7,6,7,6,6,8,5,6,7,7,4,5,5,7,8,6] },
+  { name:"Italy",           flag:"🇮🇹", scores:[4,7,6,6,5,5,7,5,6,7,7,4,5,5,6,7,6] },
+  { name:"Portugal",        flag:"🇵🇹", scores:[6,7,7,8,7,7,8,6,6,7,7,6,4,6,8,7,7] },
+  { name:"Greece",          flag:"🇬🇷", scores:[4,7,6,6,4,4,7,4,6,6,6,3,4,4,6,8,6] },
+  { name:"Ukraine",         flag:"🇺🇦", scores:[6,7,8,5,4,4,6,4,7,4,4,5,6,3,2,5,5] },
+  { name:"Poland",          flag:"🇵🇱", scores:[6,8,7,7,6,7,7,7,6,7,8,6,6,6,7,6,7] },
+  { name:"Czech Republic",  flag:"🇨🇿", scores:[6,8,7,8,6,7,8,7,6,7,8,6,4,6,8,5,7] },
+  { name:"Finland",         flag:"🇫🇮", scores:[7,9,7,10,9,9,9,8,3,8,9,8,4,8,10,6,7] },
+  { name:"New Zealand",     flag:"🇳🇿", scores:[7,8,7,9,9,8,8,7,4,7,7,6,4,7,9,7,6] },
+  { name:"Austria",         flag:"🇦🇹", scores:[6,8,7,9,8,8,9,7,4,8,8,7,4,7,9,6,8] },
+  { name:"Belgium",         flag:"🇧🇪", scores:[6,8,6,8,7,7,9,7,4,8,8,6,5,6,7,5,7] },
+  { name:"Morocco",         flag:"🇲🇦", scores:[6,6,7,5,4,5,6,5,7,5,6,5,4,4,5,6,6] },
+  { name:"Kazakhstan",      flag:"🇰🇿", scores:[6,6,7,4,3,5,5,6,7,6,6,6,5,4,6,7,5] },
+  { name:"Cuba",            flag:"🇨🇺", scores:[7,7,8,4,3,4,3,4,6,2,4,5,4,4,5,6,6] },
+  { name:"North Korea",     flag:"🇰🇵", scores:[8,5,8,2,1,2,1,3,7,1,3,4,7,2,5,5,5] },
+  { name:"Myanmar",         flag:"🇲🇲", scores:[3,4,5,2,2,3,2,3,8,3,3,4,3,2,2,5,4] },
+  { name:"Zimbabwe",        flag:"🇿🇼", scores:[2,4,5,2,2,2,3,2,8,2,2,3,2,2,3,5,4] },
+  { name:"Democratic Rep. Congo", flag:"🇨🇩", scores:[2,3,5,1,1,2,3,2,8,2,2,4,2,1,1,5,3] },
+  { name:"Somalia",         flag:"🇸🇴", scores:[1,2,5,1,1,1,2,1,8,1,1,3,2,1,1,4,3] },
+  { name:"Afghanistan",     flag:"🇦🇫", scores:[2,2,6,1,1,1,1,1,8,1,1,3,3,1,1,3,4] },
+  { name:"Qatar",           flag:"🇶🇦", scores:[8,7,6,6,7,7,7,7,6,7,9,8,5,4,7,5,6] },
+  { name:"Iraq",            flag:"🇮🇶", scores:[3,5,6,3,2,3,4,3,7,4,4,5,4,2,3,5,4] },
+  { name:"Syria",           flag:"🇸🇾", scores:[2,4,5,2,2,2,2,2,7,2,2,3,3,2,1,5,4] },
+  { name:"Libya",           flag:"🇱🇾", scores:[2,5,5,1,2,2,3,2,7,3,2,5,3,2,1,5,5] },
+  { name:"Sudan",           flag:"🇸🇩", scores:[2,3,5,1,1,2,2,2,8,2,2,3,2,1,1,4,3] },
+  { name:"Haiti",           flag:"🇭🇹", scores:[1,3,5,1,1,1,3,2,8,2,1,3,1,1,1,4,3] },
+  { name:"Honduras",        flag:"🇭🇳", scores:[3,4,5,2,2,3,4,3,7,3,3,5,2,2,3,5,4] },
+  { name:"El Salvador",     flag:"🇸🇻", scores:[6,5,7,5,5,5,5,5,7,5,5,5,3,4,6,5,5] },
+  { name:"Ecuador",         flag:"🇪🇨", scores:[3,6,6,4,3,4,5,4,7,5,4,4,3,3,3,6,4] },
+  { name:"Bolivia",         flag:"🇧🇴", scores:[4,5,6,3,3,4,4,4,8,4,4,5,3,3,4,6,4] },
+  { name:"Paraguay",        flag:"🇵🇾", scores:[3,5,5,3,2,3,4,4,7,4,3,5,2,3,5,5,4] },
+  { name:"Uruguay",         flag:"🇺🇾", scores:[6,7,7,8,7,7,8,6,6,6,6,6,3,6,8,5,7] },
+  { name:"Cuba",            flag:"🇨🇺", scores:[7,7,8,4,3,4,3,4,6,2,4,5,4,4,5,6,6] },
+  { name:"Jamaica",         flag:"🇯🇲", scores:[5,6,6,5,4,4,6,4,7,4,4,5,2,4,4,4,5] },
+  { name:"Panama",          flag:"🇵🇦", scores:[5,7,6,6,4,6,7,6,7,7,7,5,3,4,6,6,6] },
+  { name:"Costa Rica",      flag:"🇨🇷", scores:[6,7,7,7,6,6,7,6,6,6,6,5,3,5,8,5,6] },
+  { name:"Hungary",         flag:"🇭🇺", scores:[5,7,6,5,4,6,5,6,6,6,7,5,4,5,6,5,7] },
+  { name:"Romania",         flag:"🇷🇴", scores:[5,7,6,6,4,5,6,6,7,6,6,5,4,5,6,5,6] },
+  { name:"Bulgaria",        flag:"🇧🇬", scores:[4,7,6,5,4,5,6,5,7,6,5,5,3,5,6,5,6] },
+  { name:"Serbia",          flag:"🇷🇸", scores:[5,7,6,5,3,5,5,5,7,5,6,5,4,5,5,5,6] },
+  { name:"Croatia",         flag:"🇭🇷", scores:[5,7,6,6,5,6,7,6,6,6,6,5,3,6,7,7,6] },
+  { name:"Algeria",         flag:"🇩🇿", scores:[5,6,6,4,3,4,4,4,7,4,5,6,4,4,5,6,5] },
+  { name:"Tunisia",         flag:"🇹🇳", scores:[5,6,6,5,4,5,5,5,7,5,5,5,3,4,5,5,6] },
+  { name:"Ghana",           flag:"🇬🇭", scores:[5,5,6,5,4,5,5,5,7,5,4,5,3,4,6,5,5] },
+  { name:"Tanzania",        flag:"🇹🇿", scores:[5,4,6,4,4,5,5,5,8,4,4,5,3,4,5,5,5] },
+  { name:"Mozambique",      flag:"🇲🇿", scores:[3,3,5,3,2,3,4,3,8,3,3,4,2,2,4,5,3] },
+  { name:"Uzbekistan",      flag:"🇺🇿", scores:[6,6,7,4,4,6,5,6,7,5,6,6,3,4,6,6,5] },
+  { name:"Azerbaijan",      flag:"🇦🇿", scores:[6,6,7,4,3,5,5,5,7,5,7,7,4,4,5,5,5] },
+  { name:"Georgia",         flag:"🇬🇪", scores:[6,7,7,7,6,6,7,6,7,6,6,6,3,5,6,5,6] },
+  { name:"Armenia",         flag:"🇦🇲", scores:[5,7,7,6,5,5,6,5,7,5,5,5,3,5,4,4,6] },
+  { name:"Sri Lanka",       flag:"🇱🇰", scores:[4,7,7,5,3,4,5,4,7,4,5,2,3,4,5,5,5] },
+  { name:"Nepal",           flag:"🇳🇵", scores:[3,5,6,4,3,3,5,3,8,3,3,4,2,3,4,4,4] },
+  { name:"Cambodia",        flag:"🇰🇭", scores:[6,5,7,3,3,5,5,5,8,5,5,5,3,3,6,4,5] },
+  { name:"Laos",            flag:"🇱🇦", scores:[6,5,7,3,3,5,4,4,7,4,4,5,2,3,5,4,5] },
+  { name:"Mongolia",        flag:"🇲🇳", scores:[5,6,7,5,4,4,5,4,7,5,4,6,2,5,6,4,5] },
+  { name:"Belarus",         flag:"🇧🇾", scores:[6,7,7,3,2,4,3,5,7,4,5,5,4,4,5,4,6] },
+  { name:"Jordan",          flag:"🇯🇴", scores:[6,6,6,5,5,5,5,5,7,5,6,5,4,4,6,5,6] },
+  { name:"Lebanon",         flag:"🇱🇧", scores:[2,7,6,2,2,2,5,2,7,3,3,2,3,3,2,5,4] },
+  { name:"Kuwait",          flag:"🇰🇼", scores:[6,6,6,5,5,6,6,5,6,6,7,8,4,4,6,5,6] },
+  { name:"Bahrain",         flag:"🇧🇭", scores:[7,6,6,5,6,6,7,6,6,6,7,5,3,4,6,4,6] },
+  { name:"Oman",            flag:"🇴🇲", scores:[7,6,6,6,6,6,6,5,6,6,7,6,4,5,7,5,6] },
+  { name:"Yemen",           flag:"🇾🇪", scores:[1,3,5,1,1,1,2,2,7,2,1,3,2,1,1,4,3] },
+  { name:"Turkmenistan",    flag:"🇹🇲", scores:[6,5,6,2,2,4,2,3,7,3,4,6,3,3,5,4,5] },
+  { name:"Tajikistan",      flag:"🇹🇯", scores:[4,5,6,2,2,3,3,3,8,3,3,4,2,2,4,3,4] },
+  { name:"Kyrgyzstan",      flag:"🇰🇬", scores:[4,6,6,4,3,3,5,3,8,3,3,5,2,3,5,3,4] },
+];
+
+// Remove duplicate Poland entry
+const seen = new Set();
+const COUNTRIES_CLEAN = COUNTRIES.filter(c => {
+  const key = c.name + c.flag;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+});
+
+// Compute totals and global rank
+COUNTRIES_CLEAN.forEach(c => {
+  c.total = c.scores.reduce((a, b) => a + b, 0);
+});
+COUNTRIES_CLEAN.sort((a, b) => b.total - a.total);
+COUNTRIES_CLEAN.forEach((c, i) => { c.rank = i + 1; });
+
+const TOTAL_COUNTRIES = COUNTRIES_CLEAN.length;
+let displayed = COUNTRIES_CLEAN.slice(0, 5);
+
+document.getElementById('totalLabel').textContent = TOTAL_COUNTRIES;
+
+function scoreColor(v) {
+  if (v >= 9) return { bg: '#1b5e20', text: '#a5d6a7' };
+  if (v >= 7) return { bg: '#2e7d32', text: '#c8e6c9' };
+  if (v >= 5) return { bg: '#1a3a1a', text: '#81c784' };
+  if (v === 4) return { bg: '#3a2e00', text: '#fff176' };
+  if (v === 3) return { bg: '#4a1a00', text: '#ffcc80' };
+  if (v === 2) return { bg: '#5c1010', text: '#ef9a9a' };
+  return { bg: '#7c0000', text: '#ff8a80' };
+}
+
+function renderTable(countries) {
+  const head = document.getElementById('tableHead');
+  const body = document.getElementById('tableBody');
+
+  // Header
+  let hRow = `<tr><th class="indicator-col">INDICATOR</th>`;
+  countries.forEach(c => {
+    hRow += `<th class="country-col">
+      <div class="country-header">
+        <span class="country-flag-header">${c.flag}</span>
+        <span class="country-name-header">${c.name.toUpperCase()}</span>
+        <span class="country-total-header">${c.total}/170</span>
+        <span class="rank-badge">#${c.rank}</span>
+      </div>
+    </th>`;
+  });
+  hRow += '</tr>';
+  head.innerHTML = hRow;
+
+  // Body
+  let rows = '';
+  INDICATORS.forEach((ind, i) => {
+    rows += `<tr><td class="indicator-name">${ind}</td>`;
+    countries.forEach(c => {
+      const v = c.scores[i];
+      const col = scoreColor(v);
+      rows += `<td class="score-cell">
+        <span class="score-pill" style="background:${col.bg};color:${col.text}">${v}</span>
+      </td>`;
+    });
+    rows += '</tr>';
+  });
+
+  // Total row
+  rows += `<tr class="total-row"><td class="indicator-name">TOTAL / 170</td>`;
+  countries.forEach(c => {
+    rows += `<td class="score-cell" style="color:var(--accent);font-weight:600;font-size:14px">${c.total}</td>`;
+  });
+  rows += '</tr>';
+
+  body.innerHTML = rows;
+  document.getElementById('countLabel').textContent = countries.length;
+}
+
+renderTable(displayed);
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+const input = document.getElementById('searchInput');
+const suggestionsEl = document.getElementById('suggestions');
+const emptyState = document.getElementById('emptyState');
+const tableContainer = document.getElementById('tableContainer');
+let selectedIndex = -1;
+let currentSuggestions = [];
+
+function showSuggestions(query) {
+  if (!query.trim()) {
+    suggestionsEl.classList.remove('show');
+    return;
+  }
+  const q = query.toLowerCase();
+  currentSuggestions = COUNTRIES_CLEAN.filter(c =>
+    c.name.toLowerCase().includes(q)
+  ).slice(0, 8);
+
+  if (currentSuggestions.length === 0) {
+    suggestionsEl.classList.remove('show');
+    return;
+  }
+
+  suggestionsEl.innerHTML = currentSuggestions.map((c, i) => `
+    <div class="suggestion-item" data-index="${i}">
+      <span class="suggestion-flag">${c.flag}</span>
+      <span class="suggestion-name">${c.name}</span>
+      <span class="suggestion-score">RANK #${c.rank} · ${c.total}/170</span>
+    </div>
+  `).join('');
+
+  suggestionsEl.classList.add('show');
+  selectedIndex = -1;
+
+  suggestionsEl.querySelectorAll('.suggestion-item').forEach(el => {
+    el.addEventListener('click', () => {
+      selectCountry(currentSuggestions[+el.dataset.index]);
+    });
+  });
+}
+
+function selectCountry(country) {
+  // If already showing this country, skip
+  if (displayed.find(c => c.name === country.name)) {
+    input.value = '';
+    suggestionsEl.classList.remove('show');
+    return;
+  }
+
+  // Replace top 5: shift out oldest, add new
+  if (displayed.length >= 5) displayed.shift();
+  displayed.push(country);
+
+  tableContainer.style.display = 'block';
+  emptyState.classList.remove('show');
+  renderTable(displayed);
+  input.value = '';
+  suggestionsEl.classList.remove('show');
+}
+
+input.addEventListener('input', e => showSuggestions(e.target.value));
+
+input.addEventListener('keydown', e => {
+  const items = suggestionsEl.querySelectorAll('.suggestion-item');
+  if (e.key === 'ArrowDown') {
+    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    selectedIndex = Math.max(selectedIndex - 1, 0);
+  } else if (e.key === 'Enter' && selectedIndex >= 0) {
+    selectCountry(currentSuggestions[selectedIndex]);
+    return;
+  } else if (e.key === 'Escape') {
+    suggestionsEl.classList.remove('show');
+    return;
+  }
+  items.forEach((el, i) => el.classList.toggle('active', i === selectedIndex));
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-section')) {
+    suggestionsEl.classList.remove('show');
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  displayed = COUNTRIES_CLEAN.slice(0, 5);
+  input.value = '';
+  suggestionsEl.classList.remove('show');
+  tableContainer.style.display = 'block';
+  emptyState.classList.remove('show');
+  renderTable(displayed);
+});
+</script>
+</body>
+</html>
